@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tageswerk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F4EFE6">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Tageswerk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4EFE6; --card: #FBF8F3; --ink: #1E2A44; --muted: #6B7080; --line: #E6DED0; --soft: #EFE8DC;
+    --serif: "Fraunces", Georgia, serif; --sans: "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+    --spring: cubic-bezier(.34, 1.56, .64, 1); --ease: cubic-bezier(.32, .72, 0, 1);
+    --shadow: 0 1px 0 rgba(30,42,68,.04), 0 8px 24px rgba(30,42,68,.07);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .07; mix-blend-mode: multiply; z-index: 50;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.16 0 0 0 0 0.27 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  main { max-width: 460px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 18px 60px; }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+  input, textarea, select { font: inherit; color: var(--ink); }
+  .muted { color: var(--muted); }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .small { font-size: 14px; }
+
+  .collapse { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .6s var(--ease), opacity .4s ease, transform .6s var(--ease); }
+  .collapse > div { overflow: hidden; min-height: 0; }
+  body.focus .collapse { grid-template-rows: 0fr; opacity: 0; transform: scale(.96); pointer-events: none; }
+
+  .head { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 14px; gap: 10px; }
+  .head .date { color: var(--muted); font-size: 13px; }
+  .head h1 { font-family: var(--serif); font-weight: 400; font-size: 38px; letter-spacing: -.02em; line-height: 1; margin: 6px 0 0; }
+  .daymark { white-space: nowrap; margin-left: 4px; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); color: var(--muted); letter-spacing: 0; }
+  .daymark.ok { background: var(--ink); color: var(--bg); }
+  .pillbtn { background: var(--card); box-shadow: var(--shadow); border-radius: 999px; padding: 7px 13px; font-size: 13px; font-weight: 500; }
+  .pillbtn + .pillbtn { margin-left: 6px; }
+
+  /* ---------- Bühne ---------- */
+  .stagecard { background: var(--card); border-radius: 26px; box-shadow: var(--shadow); padding: 10px; margin-bottom: 12px; }
+  .stage { position: relative; border-radius: 18px; overflow: hidden; aspect-ratio: 4 / 3; background: #EFE8DC; }
+  .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .sfoot { display: flex; justify-content: space-between; align-items: center; padding: 10px 6px 4px; font-size: 13px; gap: 10px; min-height: 34px; }
+  .status { color: var(--muted); transition: color .4s; }
+  .status.alert { color: #9a5a22; } .status.good { color: #5F8466; }
+  .areas { display: flex; gap: 6px; flex-wrap: wrap; padding: 2px 4px 6px; }
+  .area { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; background: var(--bg); padding: 5px 10px; border-radius: 999px; }
+  .float { position: absolute; font-family: var(--serif); font-size: 22px; color: var(--ink); pointer-events: none; animation: floatup 1.4s var(--ease) forwards; z-index: 5; white-space: nowrap; }
+  .float.gold { color: #B97F12; font-weight: 500; text-shadow: 0 1px 0 rgba(255,250,235,.8), 0 0 14px rgba(243,196,81,.55); }
+  @keyframes floatup { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.9); } 20% { opacity: 1; transform: translate(-50%, -6px) scale(1.04); } 100% { opacity: 0; transform: translate(-50%, -34px) scale(1); } }
+
+  /* ---------- Jetzt ---------- */
+  .now { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 18px 18px 16px; margin-bottom: 12px; position: relative; overflow: hidden; }
+  .lab { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+  .prio { font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; }
+  .p1 { background: #F7DED3; color: #A9452A; } .p2 { background: #F5E8C8; color: #8A6410; } .p3 { background: #E7E6E2; color: #5B6170; }
+  .ttl { font-family: var(--serif); font-size: 24px; font-weight: 450; letter-spacing: -.01em; margin: 6px 0 14px; line-height: 1.15; overflow-wrap: anywhere; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .clock { font-family: var(--serif); font-weight: 300; font-size: 46px; letter-spacing: -.02em; line-height: 1; }
+  .next { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .btns { display: flex; gap: 8px; }
+  .play { width: 54px; height: 54px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; transition: transform .2s var(--spring); flex: none; }
+  .play:active, .done:active { transform: scale(.92); }
+  .done { width: 54px; height: 54px; border-radius: 50%; background: var(--soft); display: grid; place-items: center; transition: background .25s, transform .2s var(--spring); flex: none; }
+  .done.hit { background: #5F8466; } .done.hit path { stroke: #fff; animation: draw .32s ease forwards; stroke-dasharray: 24; stroke-dashoffset: 24; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .slidein { animation: slidein .55s var(--spring) both; }
+  @keyframes slidein { from { transform: translateX(24%); opacity: 0; } to { transform: none; opacity: 1; } }
+  .empty { text-align: center; padding: 6px; color: var(--muted); }
+  .empty b { display: block; color: var(--ink); font-family: var(--serif); font-weight: 450; font-size: 22px; margin-bottom: 6px; }
+
+  /* ---------- Tagesziele ---------- */
+  .habits { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .hab { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 14px; position: relative; }
+  .hab .hn { font-size: 13px; color: var(--muted); }
+  .hab .hv { font-family: var(--serif); font-size: 26px; font-weight: 400; letter-spacing: -.01em; margin: 2px 0 10px; }
+  .hab .hv small { font-family: var(--sans); font-size: 12px; color: var(--muted); }
+  .hab .hb { display: flex; gap: 6px; }
+  .hab .hb button { flex: 1; padding: 8px 0; border-radius: 12px; background: var(--bg); font-size: 13px; font-weight: 600; transition: transform .2s var(--spring), background .2s; }
+  .hab .hb button:active { transform: scale(.9); background: #e9e1d3; }
+  .hab .undo { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: 13px; }
+  .meter { height: 4px; border-radius: 2px; background: var(--bg); margin: -4px 0 12px; overflow: hidden; }
+  .meter > div { height: 100%; border-radius: 2px; transition: width .9s var(--ease); }
+
+  /* ---------- Aufgaben ---------- */
+  details.fold { margin-bottom: 12px; }
+  details.fold > summary { list-style: none; cursor: pointer; font-size: 13px; color: var(--muted); padding: 2px 6px; display: flex; justify-content: space-between; align-items: center; }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary .arr { transition: transform .3s var(--ease); }
+  details.fold[open] > summary .arr { transform: rotate(180deg); }
+  details.fold[open] > summary { margin-bottom: 8px; }
+  .grp { font-size: 11px; font-weight: 600; color: var(--muted); margin: 10px 6px 6px; text-transform: uppercase; letter-spacing: .06em; }
+  .item { background: var(--card); border-radius: 14px; margin-bottom: 6px; position: relative; }
+  .item.dragging { z-index: 5; box-shadow: 0 10px 30px rgba(30,42,68,.15); }
+  .item.shift { transition: transform .2s var(--ease); }
+  .irow { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 4px; font-size: 14px; }
+  .handle { width: 24px; align-self: stretch; display: grid; place-items: center; color: #C9C0B0; cursor: grab; touch-action: none; }
+  .ititle { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
+  .itime { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .mini { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .edit { padding: 0 12px 12px 38px; display: flex; flex-direction: column; gap: 10px; }
+  .edit input { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%; background: #fff; }
+  .edit .acts { display: flex; gap: 16px; font-size: 13px; }
+  .edit .del { color: #B5432E; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chips button { font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--bg); display: inline-flex; align-items: center; gap: 6px; }
+  .chips button.sel { background: var(--c, var(--ink)); color: #fff; }
+  .chips button.sel .dot { background: #fff !important; }
+  .seg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 2px; }
+  .seg button { font-size: 12px; padding: 5px 10px; border-radius: 8px; font-weight: 500; }
+  .seg button.sel { background: var(--card); box-shadow: 0 1px 3px rgba(30,42,68,.12); }
+  .add { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 6px 6px 12px; margin-bottom: 14px; }
+  .add form { display: flex; align-items: center; }
+  .add input { flex: 1; border: none; outline: none; background: transparent; padding: 10px; font-size: 16px; min-width: 0; }
+  .add .plus { width: 36px; height: 36px; border-radius: 50%; background: var(--bg); font-size: 22px; line-height: 1; display: grid; place-items: center; }
+  .add .opts { padding: 0 8px; display: flex; flex-direction: column; gap: 8px; }
+  .dlist { background: var(--card); border-radius: 14px; padding: 4px 14px; }
+  .drow { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .drow:last-child { border-bottom: none; }
+  .drow .t { flex: 1; text-decoration: line-through; text-decoration-color: #C9C0B0; color: #4A5068; }
+
+  /* ---------- Sheets ---------- */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(30,42,68,.22); z-index: 20; animation: bgIn .3s ease both; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; top: max(40px, env(safe-area-inset-top)); z-index: 21; background: var(--bg);
+    border-radius: 24px 24px 0 0; overflow-y: auto; animation: up .45s var(--ease) both; }
+  .sheet .in { max-width: 460px; margin: 0 auto; padding: 18px 18px calc(40px + env(safe-area-inset-bottom)); }
+  .sheet .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; position: sticky; top: 0; background: var(--bg); padding: 4px 0 8px; z-index: 1; }
+  .sheet h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 28px; letter-spacing: -.02em; }
+  .sheet h3 { font-size: 11px; font-weight: 600; color: var(--muted); margin: 22px 6px 8px; text-transform: uppercase; letter-spacing: .06em; }
+  @keyframes up { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes bgIn { from { opacity: 0; } to { opacity: 1; } }
+  .box { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 14px; margin-bottom: 10px; }
+  .wnav { display: flex; align-items: center; justify-content: space-between; }
+  .wnav button { width: 36px; height: 36px; border-radius: 50%; background: var(--card); box-shadow: var(--shadow); font-size: 18px; }
+  .wnav button:disabled { opacity: .3; }
+  .box textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-height: 64px; resize: vertical; margin: 6px 0 12px; background: #fff; }
+  .box label { font-size: 14px; font-weight: 500; }
+  .primary { background: var(--ink); color: var(--bg); border-radius: 12px; padding: 12px 16px; font-weight: 600; width: 100%; }
+  .gedit { display: flex; gap: 8px; align-items: center; }
+  .gedit input, .gedit select { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; background: #fff; }
+  .gedit .n { flex: 1; } .gedit .h { width: 72px; text-align: right; } .gedit .e { width: 48px; text-align: center; }
+  .swatches { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+  .swatches button { width: 24px; height: 24px; border-radius: 50%; }
+  .swatches button.sel { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
+  .rm { margin-left: auto; color: #B5432E; font-size: 13px; }
+  .bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 3px; transition: width 1s var(--ease); }
+  .week7 { display: flex; gap: 6px; margin-top: 8px; }
+  .week7 span { flex: 1; height: 26px; border-radius: 7px; background: var(--bg); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+  .week7 span.ok { background: #5F8466; color: #fff; }
+  .poster { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .poster figure { margin: 0; text-align: center; }
+  .poster svg { width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; display: block; }
+  .poster figcaption { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: .04em; }
+  .poster .today svg { outline: 1.5px solid var(--ink); outline-offset: 2px; }
+  code { background: var(--soft); padding: 1px 5px; border-radius: 5px; font-size: 12px; overflow-wrap: anywhere; }
+  .toast { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg);
+    padding: 11px 18px; border-radius: 999px; font-size: 14px; z-index: 40; box-shadow: 0 8px 24px rgba(30,42,68,.2); animation: bgIn .25s ease both; white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div id="sheet"></div>
+<script>
+// ================= Daten =================
+const KEY = 'tageswerk.v1';
+const COLORS = ['#D8643C', '#5F8466', '#E6A93A', '#3F7CAC', '#8E6BB8'];
+const PRIO = { 1: 'Hoch', 2: 'Mittel', 3: 'Niedrig' };
+const BLOCK = 20;                // alle 20 Arbeitsminuten wächst ein Stück
+let S = load();
+let ui = { edit: null, sheet: null, week: 0, addGoal: undefined, addPrio: 2, newColor: null, moreOpen: false, doneOpen: false, shown: null, blk: null, pcs: null, figK: null };
+
+function load() {
+  let d = null; try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  d = Object.assign({ goals: [], tasks: [], sessions: [], running: null, reviews: {}, habits: null, logs: [], sound: true }, d || {});
+  if (!d.habits) d.habits = [
+    { id: 'wasser', name: 'Wasser', icon: '💧', type: 'ml', target: 3000 },
+    { id: 'bewegung', name: 'Bewegung', icon: '🚶', type: 'min', target: 60 }
+  ];
+  d.tasks.forEach(t => { if (!t.prio) t.prio = 2; });
+  return d;
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => dkey(new Date());
+const goal = id => S.goals.find(g => g.id === id);
+const habit = id => S.habits.find(h => h.id === id);
+const colorOf = id => (goal(id) || {}).color || '#B9B2A5';
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+
+function mondayOf(date) { const d = new Date(date); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+function weekRange(off) { const a = mondayOf(new Date()); a.setDate(a.getDate() + 7 * off); const b = new Date(a); b.setDate(b.getDate() + 7); return [a.getTime(), b.getTime()]; }
+function fmtMin(ms) { if (ms > 0 && ms < 60000) return Math.max(1, Math.round(ms / 1000)) + ' s'; const m = Math.floor(ms / 60000), h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; }
+function fmtClock(ms) { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600); return (h ? h + ':' + pad(Math.floor(s / 60) % 60) : Math.floor(s / 60)) + ':' + pad(s % 60); }
+function fmtTime(t) { const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function fmtAmt(h, v) { if (h.type === 'min') return fmtMin(v * 60000); return h.target >= 1000 ? (v / 1000).toLocaleString('de-DE', { maximumFractionDigits: 2 }) + ' l' : v + ' ml'; }
+function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; }
+
+// ================= Aufgaben & Zeit =================
+function rollover() { const t = today(); let ch = false; S.tasks.forEach(k => { if (!k.done && k.date < t) { k.date = t; ch = true; } }); if (ch) save(); }
+function openToday() { const t = today(); return S.tasks.filter(k => !k.done && k.date === t).sort((a, b) => a.prio - b.prio || a.order - b.order); }
+const runTask = () => S.running && S.tasks.find(k => k.id === S.running.taskId);
+function taskTime(id) { let ms = S.sessions.filter(s => s.taskId === id).reduce((a, s) => a + s.end - s.start, 0); if (S.running && S.running.taskId === id) ms += Date.now() - S.running.start; return ms; }
+function weekTime(gid, off = 0) {
+  const [a, b] = weekRange(off);
+  let ms = S.sessions.filter(s => s.goal === gid && s.start >= a && s.start < b).reduce((x, s) => x + s.end - s.start, 0);
+  const r = runTask(); if (off === 0 && r && r.goal === gid) ms += Date.now() - S.running.start;
+  return ms;
+}
+const minOrder = () => S.tasks.reduce((m, k) => Math.min(m, k.order || 0), 0) - 1;
+const maxOrder = () => S.tasks.reduce((m, k) => Math.max(m, k.order || 0), 0) + 1;
+function addTask(title, g, prio = 2) { title = title.trim(); if (!title) return false; S.tasks.push({ id: uid(), title, goal: g || null, prio, date: today(), order: maxOrder(), done: false, doneAt: null }); return true; }
+function stopRunning() {
+  const k = runTask(); const end = Date.now();
+  if (k && end - S.running.start >= 1000) S.sessions.push({ id: uid(), taskId: k.id, goal: k.goal, title: k.title, start: S.running.start, end });
+  S.running = null;
+}
+function bringToFront(k) { const q = openToday(); if (q[0] && q[0].id !== k.id) k.prio = Math.min(k.prio, q[0].prio); k.order = minOrder(); }
+function start(id) { if (S.running) stopRunning(); const k = S.tasks.find(t => t.id === id); bringToFront(k); S.running = { taskId: id, start: Date.now() }; ui.edit = null; }
+function finish(id) {
+  if (S.running && S.running.taskId === id) stopRunning();
+  const k = S.tasks.find(t => t.id === id); k.done = true; k.doneAt = Date.now();
+  S.sessions.forEach(s => { if (s.taskId === id) { s.goal = k.goal; s.title = k.title; } });
+}
+
+// ================= Tagesziele =================
+function habitDay(hid, day = today()) { return S.logs.filter(l => l.habitId === hid && l.date === day).reduce((a, l) => a + l.amount, 0); }
+function logHabit(hid, amt) {
+  const h = habit(hid); const before = habitDay(hid);
+  S.logs.push({ id: uid(), habitId: hid, date: today(), amount: amt, at: Date.now() }); save();
+  return before < h.target && habitDay(hid) >= h.target;
+}
+function undoHabit(hid) { const t = today(); for (let i = S.logs.length - 1; i >= 0; i--) if (S.logs[i].habitId === hid && S.logs[i].date === t) { S.logs.splice(i, 1); return true; } return false; }
+const waterHabit = () => S.habits.find(h => h.type === 'ml');
+function thirst() {
+  const w = waterHabit(); if (!w) return { level: 0, health: 1 };
+  const v = habitDay(w.id), now = new Date(), hr = now.getHours() + now.getMinutes() / 60;
+  const exp = w.target * clamp((hr - 9) / 11), buf = w.target * .15;
+  return { level: Math.min(1, v / w.target), health: exp <= 0 ? 1 : Math.min(1, (v + buf) / (exp + buf)), v, w };
+}
+function sunLevel() { const hs = S.habits.filter(h => h.type !== 'ml'); return hs.length ? hs.reduce((a, h) => a + Math.min(1, habitDay(h.id) / h.target), 0) / hs.length : 0; }
+
+// ================= Tangram =================
+// Fläche = Zeit: kleines Dreieck 20 min, Quadrat / Parallelogramm / mittleres Dreieck 40 min, großes Dreieck 80 min → 5 h 20 pro Figur
+const SIZE = { L: 80, M: 40, Q: 40, P: 40, S: 20 };
+const FIGS = [ // geprüfte Tangram-Lösungen, Teile in Bau-Reihenfolge
+  { name: 'Haus', p: [['S', [[1,3],[2,3],[1,4]]], ['M', [[1,4],[3,4],[2,3]]], ['Q', [[1,2],[2,2],[2,3],[1,3]]], ['P', [[2,2],[3,3],[3,4],[2,3]]], ['S', [[2,2],[3,2],[3,3]]], ['L', [[0,2],[2,2],[2,0]]], ['L', [[2,0],[2,2],[4,2]]]] },
+  { name: 'Boot', p: [['P', [[0,2],[1,2],[2,3],[1,3]]], ['S', [[1,2],[2,2],[2,3]]], ['Q', [[2,2],[3,2],[3,3],[2,3]]], ['S', [[3,2],[4,3],[3,3]]], ['M', [[3,2],[5,2],[4,3]]], ['L', [[1,2],[3,2],[3,0]]], ['L', [[3,0],[3,2],[5,2]]]] },
+  { name: 'Baum', p: [['P', [[1.5,4],[2.5,4],[3.5,5],[2.5,5]]], ['Q', [[1.5,3],[2.5,3],[2.5,4],[1.5,4]]], ['L', [[0,3],[2,3],[2,1]]], ['L', [[2,1],[2,3],[4,3]]], ['S', [[1,1],[2,1],[1,2]]], ['S', [[3,1],[2,1],[3,2]]], ['M', [[1,1],[3,1],[2,0]]]] },
+];
+function fit(fig, cx, cy, mw, mh) {
+  const xs = fig.p.flatMap(q => q[1].map(v => v[0])), ys = fig.p.flatMap(q => q[1].map(v => v[1]));
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), k = Math.min(mw / (x1 - x0), mh / (y1 - y0));
+  return fig.p.map(q => q[1].map(([x, y]) => [cx + (x - (x0 + x1) / 2) * k, cy + (y - (y0 + y1) / 2) * k]));
+}
+FIGS.forEach(F => { let s = 0; F.cum = F.p.map(([k]) => s += SIZE[k]); F.total = s; F.pts = fit(F, 158, 150, 232, 196); F.mini = fit(F, 50, 64, 80, 92); });
+const FIG_MIN = FIGS[0].total;
+const BG = '#EFE8DC', SIL = '#E2D8C7';
+const pstr = pts => pts.map(q => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ');
+const centroid = pts => [pts.reduce((s, q) => s + q[0], 0) / pts.length, pts.reduce((s, q) => s + q[1], 0) / pts.length];
+const majority = o => Object.entries(o).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+// Arbeitsminuten eines Tages (nur mit Bereich) in zeitlicher Reihenfolge
+function daySegs(day) {
+  const segs = S.sessions.filter(s => goal(s.goal) && dkey(new Date(s.start)) === day).sort((a, b) => a.start - b.start).map(s => ({ g: s.goal, m: (s.end - s.start) / 60000 }));
+  const r = runTask(); if (day === today() && r && goal(r.goal)) segs.push({ g: r.goal, m: (Date.now() - S.running.start) / 60000 });
+  return segs;
+}
+// Figur eines Tages: welche Teile liegen, in welcher Farbe, wie weit ist das nächste
+function figOf(day) {
+  const segs = daySegs(day), total = segs.reduce((a, s) => a + s.m, 0);
+  const k = total > 0 ? Math.floor((total - 1e-6) / FIG_MIN) : 0, F = FIGS[(hash(day) + k) % FIGS.length], base = k * FIG_MIN, local = total - base;
+  const share = (a, b) => { const o = {}; let c = 0; segs.forEach(s => { const x0 = Math.max(a, c), x1 = Math.min(b, c + s.m); if (x1 > x0) o[s.g] = (o[s.g] || 0) + x1 - x0; c += s.m; }); return o; };
+  const n = F.cum.filter(c => local >= c - 1e-6).length;
+  const areas = F.cum.map((c, i) => i < n ? majority(share(base + (F.cum[i - 1] || 0), base + c)) : null);
+  const curG = n < F.p.length ? majority(share(base + (F.cum[n - 1] || 0), base + local)) : null;
+  return { F, k, total, local, n, areas, curG };
+}
+const wave = off => { let s = `M-100 ${off}`; for (let x = -100; x <= 600; x += 5) s += ` L${x} ${(off + 2.6 * Math.sin(x / 100 * Math.PI * 2)).toFixed(2)}`; return s + ' L600 400 L-100 400 Z'; };
+const WAVE_A = wave(0), WAVE_B = wave(5);
+const pieceSVG = (f, i) => `<polygon id="pc-${i}" points="${pstr(f.F.pts[i])}" fill="${colorOf(f.areas[i])}" stroke="${BG}" stroke-width="2.6" stroke-linejoin="round" filter="url(#sh)"/>`;
+function stageHTML(f) {
+  return `<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice"><defs>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="2.4" stdDeviation="2.4" flood-color="#3A2E22" flood-opacity=".22"/></filter>
+    <filter id="sat"><feColorMatrix id="satm" type="saturate" values="1"/></filter>
+    <clipPath id="cc"><rect id="ccr" x="0" y="0" width="400" height="0"/></clipPath></defs>
+    <rect width="400" height="300" fill="${BG}"/>
+    <g id="sunG" filter="url(#sat)" style="transition:transform 1.6s cubic-bezier(.34,1.25,.64,1)"><circle cx="340" cy="78" r="34" fill="#E6A93A"/></g>
+    <g id="waterG" style="transition:transform 1.4s cubic-bezier(.32,.72,0,1)">
+      <path d="${WAVE_A}" fill="#6FA8C4" opacity=".22"><animateTransform attributeName="transform" type="translate" from="0 0" to="-100 0" dur="7s" repeatCount="indefinite"/></path>
+      <path d="${WAVE_B}" fill="#6FA8C4" opacity=".3"><animateTransform attributeName="transform" type="translate" from="-100 0" to="0 0" dur="10s" repeatCount="indefinite"/></path>
+      <g id="rip"></g></g>
+    <g id="sil">${f.F.pts.map(p => `<polygon points="${pstr(p)}" fill="${SIL}" stroke="${BG}" stroke-width="3" stroke-linejoin="round"/>`).join('')}</g>
+    <g id="cur"></g>
+    <g id="pcs" filter="url(#sat)">${f.F.pts.slice(0, f.n).map((_, i) => pieceSVG(f, i)).join('')}</g>
+    <g id="fx"></g></svg>`;
+}
+function curColor(f) { const r = runTask(); return colorOf((r && goal(r.goal) && r.goal) || f.curG); }
+function drawCur(f) {
+  const g = $('cur'); if (!g) return;
+  if (f.n >= f.F.p.length || (!f.curG && !(runTask() && goal(runTask().goal)))) { g.innerHTML = ''; return; }
+  const p = pstr(f.F.pts[f.n]), c = curColor(f);
+  g.innerHTML = `<polygon id="curF" points="${p}" fill="${c}" opacity=".38" clip-path="url(#cc)"/>
+    <polygon points="${p}" fill="none" stroke="${c}" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round"><animate attributeName="stroke-dashoffset" from="0" to="-18" dur="1.6s" repeatCount="indefinite"/></polygon>`;
+  updateCur(f);
+}
+function updateCur(f) {
+  const r = $('ccr'); if (!r || f.n >= f.F.p.length) return;
+  const pts = f.F.pts[f.n], ys = pts.map(q => q[1]), xs = pts.map(q => q[0]), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const h = (y1 - y0) * clamp((f.local - (f.F.cum[f.n - 1] || 0)) / SIZE[f.F.p[f.n][0]]);
+  r.setAttribute('x', Math.min(...xs) - 2); r.setAttribute('width', Math.max(...xs) - Math.min(...xs) + 4); r.setAttribute('y', (y1 - h).toFixed(2)); r.setAttribute('height', h.toFixed(2));
+}
+// Wasser, Sonne, Farbkraft: zeigen immer den letzten Stand und gleiten dann zum neuen
+function stageTarget() { const th = thirst(); return { wt: 300 - th.level * 74, sun: (1 - sunLevel()) * 222, v: th.health }; }
+let dryAnim = 0;
+function setDry(v) { const m = $('satm'); if (m) m.setAttribute('values', (.25 + .75 * v).toFixed(3)); const pc = $('pcs'); if (pc) pc.style.opacity = (.7 + .3 * v).toFixed(3); }
+function syncStage() {
+  const w = $('waterG'), s = $('sunG'); if (!w) return;
+  const from = ui.shown || stageTarget(), to = stageTarget();
+  w.style.transition = s.style.transition = 'none';
+  w.style.transform = `translateY(${from.wt.toFixed(1)}px)`; s.style.transform = `translateY(${from.sun.toFixed(1)}px)`; setDry(from.v);
+  void w.getBoundingClientRect();
+  w.style.transition = s.style.transition = '';
+  w.style.transform = `translateY(${to.wt.toFixed(1)}px)`; s.style.transform = `translateY(${to.sun.toFixed(1)}px)`;
+  if (Math.abs(to.v - from.v) > .005) { const t0 = performance.now(), id = ++dryAnim; (function f(t) { if (id !== dryAnim) return; const k = clamp((t - t0) / 1400), e = 1 - Math.pow(1 - k, 3); setDry(from.v + (to.v - from.v) * e); if (k < 1) requestAnimationFrame(f); })(t0); }
+  const recovered = ui.shown && (to.v - from.v > .04 || (from.v < .6 && to.v >= .6));
+  ui.shown = to;
+  return recovered;
+}
+
+// ================= Effekte & Ton =================
+const svgEl = (tag, attrs) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const SPRING = 'cubic-bezier(.34,1.56,.64,1)';
+function snapPiece(f, i) {
+  const e = $('pc-' + i); if (!e) return;
+  e.style.transformBox = 'fill-box'; e.style.transformOrigin = 'center';
+  e.animate([{ transform: 'translate(0px,-30px) rotate(-22deg) scale(1.15)', opacity: 0 }, { opacity: 1, offset: .25 },
+    { transform: 'translate(0px,3px) rotate(2deg) scale(.96)', offset: .7 }, { transform: 'none', opacity: 1 }], { duration: 780, easing: 'cubic-bezier(.3,.7,.3,1)' });
+  setTimeout(() => { burst(centroid(f.F.pts[i]), colorOf(f.areas[i])); thump(); tone(19, .05); }, 540);
+}
+function thump() { [$('sil'), $('pcs')].forEach(g => g && g.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(1.8px)', offset: .25 }, { transform: 'translateY(0)' }], { duration: 420, easing: SPRING })); }
+function burst([cx, cy], color) {
+  const fx = $('fx'); if (!fx) return;
+  for (let k = 0; k < 10; k++) {
+    const a = k / 10 * Math.PI * 2 + .3, r0 = 18, d = 18;
+    const l = svgEl('line', { x1: cx + Math.cos(a) * r0, y1: cy + Math.sin(a) * r0, x2: cx + Math.cos(a) * (r0 + 7), y2: cy + Math.sin(a) * (r0 + 7), stroke: k % 2 ? '#F3C451' : color, 'stroke-width': 2.2, 'stroke-linecap': 'round' });
+    fx.appendChild(l);
+    l.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d}px)`, opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).onfinish = () => l.remove();
+  }
+}
+function pulseCur() {
+  const f = $('curF'); if (!f) return; f.style.transformBox = 'fill-box'; f.style.transformOrigin = 'center';
+  f.animate([{ opacity: .38, transform: 'scale(1)' }, { opacity: .75, transform: 'scale(1.05)', offset: .3 }, { opacity: .38, transform: 'scale(1)' }], { duration: 700, easing: SPRING });
+}
+function ripple() {
+  const host = $('rip'); if (!host) return;
+  [60, 200, 330].forEach((x, i) => {
+    const c = svgEl('ellipse', { cx: x, cy: 2, rx: 16, ry: 3.6, fill: 'none', stroke: '#fff', 'stroke-width': 1.4, 'vector-effect': 'non-scaling-stroke' });
+    c.style.transformBox = 'fill-box'; c.style.transformOrigin = 'center'; host.appendChild(c);
+    c.animate([{ transform: 'scale(.15)', opacity: .95 }, { transform: 'scale(1.7)', opacity: 0 }], { duration: 1300, delay: i * 160, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'both' }).onfinish = () => c.remove();
+  });
+}
+function complete(f) {
+  f.F.pts.forEach((_, i) => { const e = $('pc-' + i); if (!e) return; e.style.transformBox = 'fill-box'; e.style.transformOrigin = 'center';
+    e.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.1)', offset: .35 }, { transform: 'scale(1)' }], { duration: 600, delay: i * 90, easing: SPRING }); });
+  setTimeout(() => { burst(centroid(f.F.pts.flat()), '#1E2A44'); chord(10); }, 700);
+}
+function floatText(txt, host, x = 50, y = 38, cls = '') { if (!host) return; const e = document.createElement('div'); e.className = 'float tnum ' + cls; e.textContent = txt; e.style.left = x + '%'; e.style.top = y + '%'; host.appendChild(e); setTimeout(() => e.remove(), 1500); }
+let ac;
+function tone(step = 0, vol = .07, delay = 0) {
+  if (S.sound === false) return;
+  try { ac ||= new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + delay;
+    o.type = 'sine'; o.frequency.value = 523.25 * Math.pow(2, step / 12); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + .55);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .6); } catch (e) {}
+}
+const PENTA = [0, 2, 4, 7, 9];
+const note = n => PENTA[n % 5] + 12 * (Math.floor(n / 5) % 2);
+function chord(n) { const b = note(n); tone(b, .06); tone(b + 4, .045, .07); tone(b + 7, .04, .14); }
+
+// ================= Import / Export =================
+function importLines(raw) {
+  const have = new Set(openToday().map(k => k.title.toLowerCase())); let n = 0;
+  raw.split(/\r?\n/).map(l => l.replace(/^[-•*\s]+/, '').trim()).filter(Boolean).forEach(l => {
+    if (have.has(l.toLowerCase())) return;
+    let g = null, title = l, prio = 2; const m = l.match(/^([^:]{1,40}):\s*(.+)$/);
+    if (m) { const x = S.goals.find(z => z.name.toLowerCase() === m[1].trim().toLowerCase()); if (x) { g = x.id; title = m[2]; } }
+    if (/^!\s*/.test(title)) { prio = 1; title = title.replace(/^!\s*/, ''); }
+    if (addTask(title, g, prio)) { have.add(l.toLowerCase()); n++; }
+  });
+  save(); return n;
+}
+function importFromHash() {
+  const h = location.hash;
+  if (h.startsWith('#wasser=')) { const w = waterHabit(); const v = parseInt(h.slice(8)) || 350; if (w) { const full = logHabit(w.id, v); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => toast(full ? 'Wasser voll · alles leuchtet' : `+${v} ml Wasser`), 300); } return; }
+  if (!h.startsWith('#import=')) return;
+  let raw; try { raw = decodeURIComponent(h.slice(8)); } catch (e) { raw = h.slice(8); }
+  const n = importLines(raw); history.replaceState(null, '', location.pathname + location.search);
+  toast(n ? `${n} Aufgabe${n > 1 ? 'n' : ''} übernommen` : 'Keine neuen Aufgaben');
+}
+function icsDate(t) { const d = new Date(t); return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z'; }
+function icsEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function exportIcs() {
+  const [a, b] = weekRange(ui.week); const list = S.sessions.filter(s => s.start >= a && s.start < b);
+  if (!list.length) return toast('Diese Woche gibt es noch nichts zu exportieren');
+  const now = icsDate(Date.now());
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Tageswerk//DE', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Tageswerk'];
+  list.forEach(s => { const g = goal(s.goal); L.push('BEGIN:VEVENT', `UID:${s.id}@tageswerk`, `DTSTAMP:${now}`, `DTSTART:${icsDate(s.start)}`, `DTEND:${icsDate(s.end)}`, `SUMMARY:${icsEsc(s.title)}`, `DESCRIPTION:${icsEsc(g ? 'Bereich: ' + g.name : 'Ohne Bereich')}`, `CATEGORIES:${icsEsc(g ? g.name : 'Ohne Bereich')}`, 'END:VEVENT'); });
+  L.push('END:VCALENDAR');
+  const url = URL.createObjectURL(new Blob([L.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' }));
+  const el = document.createElement('a'); el.href = url; el.download = `tageswerk-woche-${dkey(new Date(a))}.ics`; document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000); toast(`${list.length} Einträge exportiert`);
+}
+
+// ================= Bausteine =================
+const playIcon = s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor" style="margin-left:3px"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>`;
+const pauseIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>`;
+const checkIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E2A44" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+function goalChips(sel, act, id = '') {
+  return `<div class="chips">${S.goals.map(g => `<button class="${sel === g.id ? 'sel' : ''}" style="--c:${g.color}" data-a="${act}" data-g="${g.id}" data-id="${id}"><span class="dot" style="background:${g.color}"></span>${esc(g.name)}</button>`).join('')}<button class="${!sel ? 'sel' : ''}" data-a="${act}" data-g="" data-id="${id}">Ohne Bereich</button></div>`;
+}
+const prioSeg = (sel, act, id = '') => `<div class="seg">${[1, 2, 3].map(p => `<button class="${sel === p ? 'sel' : ''}" data-a="${act}" data-p="${p}" data-id="${id}">${PRIO[p]}</button>`).join('')}</div>`;
+const prioTag = p => `<span class="prio p${p}">${PRIO[p]}</span>`;
+const weekChip = g => `${fmtMin(weekTime(g.id))}${g.hours ? ` / ${g.hours} h` : ''}`;
+function statusOf(f) {
+  const th = thirst();
+  if (f.n >= f.F.p.length) return [`${f.F.name} vollendet${f.k ? ` · ${f.k + 1}. Figur heute` : ''}`, 'good'];
+  if (th.health < .6) return ['Die Farben verblassen – ein Glas Wasser?', 'alert'];
+  if (!S.goals.length) return ['Leg Bereiche an – dann wächst hier deine Figur', ''];
+  if (!f.total) return [`Heute entsteht: ${f.F.name} · alle ${BLOCK} min ein Stück`, ''];
+  if (th.level >= 1) return ['Wasser voll · alles leuchtet', 'good'];
+  return [`Heute entsteht: ${f.F.name}${f.k ? ` (${f.k + 1}. Figur)` : ''}`, ''];
+}
+function dayOk() { const w = waterHabit(); return figOf(today()).total >= BLOCK && (!w || habitDay(w.id) >= w.target / 2); }
+function nextText(k) {
+  const g = goal(k.goal), r = runTask();
+  if (!g) return 'Ohne Bereich – zählt nicht ins Bild';
+  if (r && r.id === k.id) { const f = figOf(today()); return `Nächstes Stück in ${Math.max(1, Math.ceil(BLOCK - (f.total % BLOCK) - 1e-9))} min`; }
+  return 'Diese Woche: ' + weekChip(g);
+}
+
+// ================= Hauptansicht =================
+function viewMain(f) {
+  const r = runTask(), q = openToday(), cur = r || q[0];
+  const rest = q.filter(k => !cur || k.id !== cur.id);
+  const t = today();
+  const doneT = S.tasks.filter(k => k.done && k.doneAt && dkey(new Date(k.doneAt)) === t).sort((a, b) => a.doneAt - b.doneAt);
+  const doneMs = doneT.reduce((x, k) => x + taskTime(k.id), 0);
+  if (ui.addGoal === undefined) ui.addGoal = S.goals[0] ? S.goals[0].id : null;
+  const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  const ok = dayOk();
+
+  let h = `<div class="collapse"><div><div class="head"><div><div class="date">${date} <span class="daymark${ok ? ' ok' : ''}">${ok ? 'Tag zählt ✓' : 'Tag zählt noch nicht'}</span></div><h1>Heute</h1></div><div style="white-space:nowrap"><button class="pillbtn" data-a="sheet" data-s="woche">Woche</button><button class="pillbtn" data-a="sheet" data-s="setup">Einrichten</button></div></div></div></div>`;
+  const [stx, stc] = statusOf(f);
+  h += `<section class="stagecard"><div class="stage" id="stage">${stageHTML(f)}</div>
+    <div class="sfoot"><span class="status ${stc}" id="status">${stx}</span><span class="tnum muted" id="pieces" style="white-space:nowrap">${f.n} von ${f.F.p.length} Teilen</span></div>
+    ${S.goals.length ? `<div class="collapse"><div><div class="areas">${S.goals.map(g => `<span class="area"><span class="dot" style="background:${g.color}"></span>${esc(g.name)} <span class="tnum muted" id="wk-${g.id}">${weekChip(g)}</span></span>`).join('')}</div></div></div>` : ''}</section>`;
+
+  // Jetzt dran
+  if (cur) {
+    const g = goal(cur.goal), running = !!r;
+    h += `<section class="now"><div id="nowin"><div class="lab"><span class="dot" style="background:${colorOf(cur.goal)}"></span>Jetzt dran · ${g ? esc(g.name) : 'ohne Bereich'} ${prioTag(cur.prio)}</div>
+      <div class="ttl">${esc(cur.title)}</div>
+      <div class="row"><div><div class="clock tnum" id="clock">${fmtClock(taskTime(cur.id))}</div><div class="next tnum" id="next">${nextText(cur)}</div></div>
+      <div class="btns"><button class="play" data-a="${running ? 'pause' : 'start'}" data-id="${cur.id}" aria-label="${running ? 'Pause' : 'Start'}">${running ? pauseIcon : playIcon(22)}</button>
+      <button class="done" data-a="finish" data-id="${cur.id}" aria-label="Fertig">${checkIcon}</button></div></div></div></section>`;
+  } else {
+    h += `<section class="now"><div class="empty">${!S.goals.length ? '<b>Willkommen.</b>Leg zuerst fest, in welche Bereiche deine Zeit fließen soll – z. B. „Buch“, „Firma“, „Gesundheit“. Jeder Bereich hat seine Farbe in deiner Tagesfigur.<br><br><button class="pillbtn" data-a="sheet" data-s="setup" style="background:var(--ink);color:var(--bg)">Bereiche anlegen</button>' : doneT.length ? '<b>Alles erledigt.</b>Schönen Feierabend – oder schreib unten eine neue Aufgabe.' : '<b>Was ist heute das Wichtigste?</b>Schreib unten deine erste Aufgabe.'}</div></section>`;
+  }
+
+  h += `<div class="collapse"><div>`;
+  if (rest.length) {
+    h += `<details class="fold" data-fold="more" ${ui.moreOpen ? 'open' : ''}><summary><span>Weitere Aufgaben · ${rest.length}</span><span class="arr">▾</span></summary>`;
+    [1, 2, 3].forEach(p => { const l = rest.filter(k => k.prio === p); if (l.length) h += `<div class="grp">${PRIO[p]}</div><div class="list" data-prio="${p}">${l.map(itemRow).join('')}</div>`; });
+    h += `</details>`;
+  }
+  h += `<div class="add"><form data-a="add"><input name="t" placeholder="Neue Aufgabe …" autocomplete="off" enterkeyhint="done"><button class="plus" aria-label="Hinzufügen">+</button></form>
+    <div class="opts">${prioSeg(ui.addPrio, 'addprio')}${S.goals.length ? goalChips(ui.addGoal, 'addgoal') : ''}</div></div>`;
+  if (S.habits.length) {
+    h += `<div class="habits">${S.habits.map(hb => {
+      const v = habitDay(hb.id), pct = Math.min(100, v / hb.target * 100), steps = hb.type === 'ml' ? [350, 500] : [15, 30];
+      return `<div class="hab" data-h="${hb.id}"><div class="hn">${esc(hb.name)}</div>${v ? `<button class="undo" data-a="undo" data-h="${hb.id}" title="Letzten Eintrag zurücknehmen">↶</button>` : ''}
+        <div class="hv tnum">${fmtAmt(hb, v)} <small>von ${fmtAmt(hb, hb.target)}</small></div>
+        <div class="meter"><div style="width:${pct}%;background:${hb.type === 'ml' ? '#6FA8C4' : '#E6A93A'}"></div></div>
+        <div class="hb">${steps.map(s => `<button data-a="log" data-h="${hb.id}" data-v="${s}">+${s}</button>`).join('')}</div></div>`;
+    }).join('')}</div>`;
+  }
+  if (doneT.length) h += `<details class="fold" data-fold="done" ${ui.doneOpen ? 'open' : ''}><summary><span>Heute geschafft · ${doneT.length} · <span class="tnum">${fmtMin(doneMs)}</span></span><span class="arr">▾</span></summary><div class="dlist">${doneT.map(k => `<div class="drow" data-a="edit" data-id="${k.id}" style="cursor:pointer"><span class="dot" style="background:${colorOf(k.goal)}"></span><span class="t">${esc(k.title)}</span><span class="muted tnum small">${fmtMin(taskTime(k.id))}</span></div>${ui.edit === k.id ? `<div style="padding:4px 0 12px">${goalChips(k.goal, 'setgoal', k.id)}<div class="muted small" style="margin-top:6px">Bereich ändern – die Zeit und die Farbe im Bild wandern mit.</div></div>` : ''}`).join('')}</div></details>`;
+  h += `</div></div>`;
+  return h;
+}
+function itemRow(k) {
+  const spent = taskTime(k.id), open = ui.edit === k.id;
+  return `<div class="item" data-id="${k.id}"><div class="irow"><div class="handle" aria-label="Verschieben"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/><circle cx="3" cy="13" r="1.5"/><circle cx="9" cy="13" r="1.5"/></svg></div>
+    <span class="dot" style="background:${colorOf(k.goal)}"></span><div class="ititle" data-a="edit" data-id="${k.id}">${esc(k.title)}</div>${spent ? `<span class="itime tnum">${fmtMin(spent)}</span>` : ''}
+    <button class="mini" data-a="front" data-id="${k.id}">Als Nächstes</button></div>
+    ${open ? `<div class="edit"><input value="${esc(k.title)}" data-a="rename" data-id="${k.id}">${prioSeg(k.prio, 'setprio', k.id)}${goalChips(k.goal, 'setgoal', k.id)}<div class="acts"><button data-a="start" data-id="${k.id}">▶ Jetzt starten</button><button class="del" data-a="del" data-id="${k.id}">Löschen</button></div></div>` : ''}</div>`;
+}
+
+// ================= Woche =================
+function miniFig(day) {
+  const f = figOf(day);
+  return `<svg viewBox="0 0 100 133" style="background:${BG}">${f.F.mini.map((p, i) => `<polygon points="${pstr(p)}" fill="${i < f.n ? colorOf(f.areas[i]) : SIL}" stroke="${BG}" stroke-width="1.6" stroke-linejoin="round"/>`).join('')}</svg>`;
+}
+function viewWoche() {
+  const [a, b] = weekRange(ui.week);
+  const ss = S.sessions.filter(s => s.start >= a && s.start < b).map(s => ({ ...s }));
+  const r = runTask(); if (ui.week === 0 && r) ss.push({ start: S.running.start, end: Date.now(), goal: r.goal, title: r.title, live: true });
+  const end = new Date(b - 86400000), t = today();
+  const lbl = `${new Date(a).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} – ${end.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })}`;
+  let h = `<div class="wnav"><button data-a="wk" data-d="-1">‹</button><div style="text-align:center"><b>${lbl}</b><div class="muted small">${ui.week === 0 ? 'Diese Woche' : ui.week === -1 ? 'Letzte Woche' : ''}</div></div><button data-a="wk" data-d="1" ${ui.week >= 0 ? 'disabled' : ''}>›</button></div>`;
+  h += `<h3>Wochenposter</h3><div class="box"><div class="poster">${['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((d, i) => {
+    const day = dkey(new Date(a + i * 864e5 + 3600000));
+    if (day > t) return `<figure><svg viewBox="0 0 100 133" style="outline:1px dashed #d4cab8;outline-offset:-1px"></svg><figcaption>${d}</figcaption></figure>`;
+    return `<figure${day === t ? ' class="today"' : ''}>${miniFig(day)}<figcaption>${day === t ? `<b>${d}</b>` : d}</figcaption></figure>`;
+  }).join('')}</div></div>`;
+  h += `<h3>Wochenbudget</h3><div class="box">`;
+  if (!S.goals.length) h += '<span class="muted small">Noch keine Bereiche.</span>';
+  S.goals.forEach(g => { const ms = weekTime(g.id, ui.week), pct = g.hours ? Math.min(100, ms / (g.hours * 36000)) : 0;
+    h += `<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:8px"><span style="display:inline-flex;align-items:center;gap:6px"><span class="dot" style="background:${g.color}"></span>${esc(g.name)}</span><span class="tnum small">${fmtMin(ms)}${g.hours ? ` <span class="muted">von ${g.hours} h</span>` : ''}</span></div>${g.hours ? `<div class="bar" style="margin-top:8px"><div style="width:${pct}%;background:${g.color}"></div></div>` : ''}</div>`; });
+  h += `</div>`;
+  if (S.habits.length) {
+    h += `<h3>Tagesziele</h3><div class="box">`;
+    S.habits.forEach(hb => { let n = 0; const cells = Array.from({ length: 7 }, (_, i) => { const d = new Date(a + i * 864e5 + 3600000); const ok = habitDay(hb.id, dkey(d)) >= hb.target; if (ok) n++; return `<span class="${ok ? 'ok' : ''}">${'MDMDFSS'[i]}</span>`; }).join('');
+      h += `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between"><span>${esc(hb.name)}</span><span class="small muted">${n} von 7 Tagen</span></div><div class="week7">${cells}</div></div>`; });
+    h += `</div>`;
+  }
+  const days = {}; ss.sort((x, y) => x.start - y.start).forEach(s => (days[dkey(new Date(s.start))] ||= []).push(s));
+  h += `<h3>Protokoll</h3>`;
+  const keys = Object.keys(days);
+  h += keys.length ? keys.map(k => `<div class="box"><b class="small">${new Date(k + 'T12:00').toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}</b>${days[k].map(s => `<div class="drow"><span class="dot" style="background:${colorOf(s.goal)}"></span><span style="flex:1">${esc(s.title)}</span><span class="muted tnum small">${fmtTime(s.start)}–${s.live ? 'jetzt' : fmtTime(s.end)}</span></div>`).join('')}</div>`).join('') : `<p class="muted small" style="margin:0 6px">In dieser Woche ist noch nichts erfasst.</p>`;
+  h += `<button class="primary" style="margin-top:6px" data-a="ics">In den Kalender übernehmen</button>`;
+  const rv = S.reviews[dkey(new Date(a))] || {};
+  h += `<h3>Wochenrückblick · ca. 20 Minuten</h3><div class="box"><label>Was lief gut?</label><textarea data-rv="good">${esc(rv.good || '')}</textarea><label>Was lief nicht – und warum?</label><textarea data-rv="bad">${esc(rv.bad || '')}</textarea><label>Was ändere ich nächste Woche?</label><textarea data-rv="change">${esc(rv.change || '')}</textarea></div>`;
+  return h;
+}
+
+// ================= Einrichten =================
+function viewSetup() {
+  if (!ui.newColor) ui.newColor = COLORS.find(c => !S.goals.some(g => g.color === c)) || COLORS[0];
+  let h = `<h3 style="margin-top:4px">Bereiche · Wochenbudget</h3><p class="muted small" style="margin:0 6px 10px">Wohin soll deine Zeit fließen? Alle ${BLOCK} Minuten Arbeit wächst ein Stück deiner Tagesfigur – in der Farbe des Bereichs.</p>`;
+  S.goals.forEach(g => { h += `<div class="box"><div class="gedit"><span class="dot" style="background:${g.color};width:12px;height:12px"></span><input class="n" value="${esc(g.name)}" data-a="gname" data-id="${g.id}"><input class="h" type="number" min="0" step="0.5" inputmode="decimal" value="${g.hours || ''}" placeholder="0" data-a="ghours" data-id="${g.id}"><span class="muted small">h/Wo</span></div>
+    <div class="swatches">${COLORS.map(c => `<button style="background:${c}" class="${c === g.color ? 'sel' : ''}" data-a="gcolor" data-id="${g.id}" data-c="${c}" aria-label="Farbe"></button>`).join('')}<button class="rm" data-a="gdel" data-id="${g.id}">Entfernen</button></div></div>`; });
+  if (S.goals.length < 5) h += `<form class="box" data-a="gadd"><div class="gedit"><span class="dot" style="background:${ui.newColor};width:12px;height:12px"></span><input class="n" name="n" placeholder="Neuer Bereich, z. B. Buch" autocomplete="off"><input class="h" name="h" type="number" min="0" step="0.5" inputmode="decimal" placeholder="0"><span class="muted small">h/Wo</span></div>
+    <div class="swatches">${COLORS.map(c => `<button type="button" style="background:${c}" class="${c === ui.newColor ? 'sel' : ''}" data-a="ncolor" data-c="${c}" aria-label="Farbe"></button>`).join('')}</div><button class="primary" style="margin-top:12px">Bereich hinzufügen</button></form>`;
+  h += `<h3>Tagesziele</h3><p class="muted small" style="margin:0 6px 10px">Dinge ohne Uhr. Wasser hebt das Wasser im Bild – trinkst du zu wenig, verblassen die Farben. Alle anderen Tagesziele lassen die Sonne steigen.</p>`;
+  S.habits.forEach(hb => { h += `<div class="box"><div class="gedit"><input class="n" value="${esc(hb.name)}" data-a="hname" data-id="${hb.id}"><input class="h" type="number" min="1" inputmode="numeric" value="${hb.target}" data-a="htarget" data-id="${hb.id}"><span class="muted small">${hb.type === 'ml' ? 'ml' : 'min'}</span></div><div class="swatches"><span class="muted small">${hb.type === 'ml' ? 'Menge pro Tag – Wasser im Bild' : 'Dauer pro Tag – Sonne im Bild'}</span><button class="rm" data-a="hdel" data-id="${hb.id}">Entfernen</button></div></div>`; });
+  h += `<form class="box" data-a="hadd"><div class="gedit"><input class="n" name="n" placeholder="z. B. Spinning, Lesen" autocomplete="off"><input class="h" name="t" type="number" min="1" inputmode="numeric" placeholder="45"><select name="ty"><option value="min">min</option>${waterHabit() ? '' : '<option value="ml">ml</option>'}</select></div><button class="primary" style="margin-top:12px">Tagesziel hinzufügen</button></form>`;
+  h += `<h3>Töne</h3><div class="box"><div class="seg"><button class="${S.sound !== false ? 'sel' : ''}" data-a="sound" data-v="1">An</button><button class="${S.sound === false ? 'sel' : ''}" data-a="sound" data-v="0">Aus</button></div></div>`;
+  const base = location.href.split('#')[0];
+  h += `<h3>Verbindungen</h3><div class="box small"><b>Kalender</b><p style="margin:6px 0 0">Unter „Woche“ → „In den Kalender übernehmen“ landen deine gearbeiteten Zeiten in deiner Kalender-App.</p></div>
+  <div class="box small"><b>Aufgaben einfügen</b><p style="margin:6px 0 8px">Liste aus Erinnerungen oder Notizen kopieren und hier einfügen – eine Aufgabe pro Zeile. „Bereich: Aufgabe“ ordnet direkt zu, ein „!“ vorne macht sie wichtig.</p>
+  <textarea id="paste" placeholder="Eine Aufgabe pro Zeile" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:60px;background:#fff"></textarea><button class="primary" style="margin-top:8px" data-a="paste">Aufgaben übernehmen</button></div>
+  <div class="box small"><b>Siri & Kurzbefehle</b><p style="margin:6px 0 0" class="muted">Kurzbefehle können diese Adressen öffnen:<br>Wasser buchen: <code>${esc(base)}#wasser=350</code><br>Aufgaben schicken: <code>${esc(base)}#import=…</code><br>Fertig eingerichtete Kurzbefehle folgen, sobald Tageswerk eine feste Adresse hat.</p></div>`;
+  return h;
+}
+
+// ================= Rendern =================
+function render() {
+  rollover();
+  const r = runTask(), f = figOf(today());
+  $('app').innerHTML = viewMain(f);
+  drawCur(f);
+  const recovered = syncStage();
+  if (recovered) { ripple(); const s = $('status'); if (f.n < f.F.p.length) { s.textContent = 'Die Farben kehren zurück'; s.className = 'status good'; } }
+  ui.blk = Math.floor(f.total / BLOCK); ui.pcs = f.n; ui.figK = f.k;
+  void document.body.offsetHeight;
+  if (document.body.classList.contains('focus') !== !!r) window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.body.classList.toggle('focus', !!r);
+  const sh = $('sheet');
+  if (ui.sheet) {
+    const title = ui.sheet === 'woche' ? 'Woche' : 'Einrichten';
+    const body = ui.sheet === 'woche' ? viewWoche() : viewSetup();
+    const fresh = !sh.querySelector('.sheet'), scroll = fresh ? 0 : sh.querySelector('.sheet').scrollTop;
+    sh.innerHTML = `<div class="sheet-bg" data-a="close"></div><div class="sheet"><div class="in"><div class="top"><h2>${title}</h2><button class="pillbtn" data-a="close">Fertig</button></div>${body}</div></div>`;
+    if (!fresh) { const s = sh.querySelector('.sheet'); s.style.animation = 'none'; sh.querySelector('.sheet-bg').style.animation = 'none'; s.scrollTop = scroll; }
+  } else sh.innerHTML = '';
+  tick();
+}
+function tick() {
+  const r = runTask();
+  document.title = r ? `${fmtClock(taskTime(r.id))} · ${r.title}` : 'Tageswerk';
+  if (!r) return;
+  const c = $('clock'); if (c) c.textContent = fmtClock(taskTime(r.id));
+  const nx = $('next'); if (nx) nx.textContent = nextText(r);
+  const g = goal(r.goal); if (!g) return;
+  const f = figOf(today()), blk = Math.floor(f.total / BLOCK);
+  if (ui.blk !== null && blk > ui.blk) {
+    if (f.k !== ui.figK) { render(); toast(`Neue Figur: ${f.F.name}`); chord(3); return; }
+    const host = $('stage');
+    if (f.n > ui.pcs) {
+      $('pcs').insertAdjacentHTML('beforeend', pieceSVG(f, f.n - 1)); drawCur(f); snapPiece(f, f.n - 1); chord(f.n + 2);
+      const cp = centroid(f.F.pts[f.n - 1]); floatText(`+${BLOCK} min`, host, cp[0] / 4, cp[1] / 3 - 6, 'gold');
+      const s = $('status'); s.textContent = f.n < f.F.p.length ? `Teil ${f.n} von ${f.F.p.length} sitzt` : `${f.F.name} vollendet`; s.className = 'status good';
+      $('pieces').textContent = `${f.n} von ${f.F.p.length} Teilen`;
+      if (f.n === f.F.p.length) setTimeout(() => complete(f), 900);
+    } else {
+      pulseCur(); tone(note(f.n + 1), .05);
+      const cp = centroid(f.F.pts[f.n]); floatText(`+${BLOCK} min`, host, cp[0] / 4, cp[1] / 3 - 6, 'gold');
+    }
+    const wk = $('wk-' + g.id); if (wk) wk.textContent = weekChip(g);
+    const dm = document.querySelector('.daymark'); if (dm && dayOk() && !dm.classList.contains('ok')) { dm.classList.add('ok'); dm.textContent = 'Tag zählt ✓'; }
+  }
+  ui.blk = blk; ui.pcs = f.n; ui.figK = f.k;
+  updateCur(f);
+}
+function toast(m) { document.querySelectorAll('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+
+// ================= Ereignisse =================
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b || ['INPUT', 'FORM', 'TEXTAREA', 'SELECT'].includes(b.tagName)) return;
+  const a = b.dataset.a, id = b.dataset.id, task = () => S.tasks.find(t => t.id === id);
+  switch (a) {
+    case 'start': start(id); tone(0, .03); break;
+    case 'pause': stopRunning(); break;
+    case 'finish': {
+      const k = task(), ms = taskTime(id); b.classList.add('hit'); chord(figOf(today()).n + 2);
+      setTimeout(() => {
+        finish(id); save(); render();
+        const now = document.querySelector('.now'); if (ms >= 1000) floatText(`+${fmtMin(ms)}`, now);
+        const nin = $('nowin'); if (nin) nin.classList.add('slidein');
+        if (!goal(k.goal)) toast('Erledigt – ohne Bereich zählt es nicht ins Bild');
+        else if (!openToday().length) toast('Alles für heute geschafft');
+      }, 420);
+      return;
+    }
+    case 'front': bringToFront(task()); ui.edit = null; toast('Steht jetzt ganz oben'); break;
+    case 'edit': ui.edit = ui.edit === id ? null : id; render(); return;
+    case 'setgoal': { const k = task(); k.goal = b.dataset.g || null; S.sessions.forEach(x => { if (x.taskId === id) x.goal = k.goal; }); break; }
+    case 'setprio': task().prio = +b.dataset.p; break;
+    case 'del': S.tasks = S.tasks.filter(t => t.id !== id); ui.edit = null; toast('Gelöscht'); break;
+    case 'addgoal': ui.addGoal = b.dataset.g || null; render(); return;
+    case 'addprio': ui.addPrio = +b.dataset.p; render(); return;
+    case 'log': {
+      const hb = habit(b.dataset.h), full = logHabit(hb.id, +b.dataset.v);
+      render();
+      if (hb.type === 'ml') { tone(4, .045); tone(9, .03, .08); setTimeout(ripple, 700); if (full) { setTimeout(ripple, 1300); chord(7); toast('Wasser voll · alles leuchtet'); } }
+      else { tone(7, .045); if (full) setTimeout(() => { burst([340, 78], '#E6A93A'); chord(4); toast(`${hb.name}: Tagesziel erreicht`); }, 1100); }
+      return;
+    }
+    case 'undo': undoHabit(b.dataset.h); break;
+    case 'sheet': ui.sheet = b.dataset.s; ui.week = 0; render(); return;
+    case 'close': ui.sheet = null; render(); return;
+    case 'wk': ui.week += +b.dataset.d; render(); return;
+    case 'ics': exportIcs(); return;
+    case 'paste': { const n = importLines($('paste').value); toast(`${n} Aufgabe${n === 1 ? '' : 'n'} übernommen`); ui.sheet = null; break; }
+    case 'ncolor': ui.newColor = b.dataset.c; render(); return;
+    case 'gcolor': goal(id).color = b.dataset.c; break;
+    case 'sound': S.sound = b.dataset.v === '1'; break;
+    case 'gdel': if (!confirm('Bereich entfernen? Seine Aufgaben werden zu „Ohne Bereich“ und zählen nicht mehr ins Bild.')) return;
+      S.goals = S.goals.filter(g => g.id !== id); S.tasks.forEach(t => { if (t.goal === id) t.goal = null; }); if (ui.addGoal === id) ui.addGoal = undefined; break;
+    case 'hdel': if (!confirm('Tagesziel entfernen?')) return; S.habits = S.habits.filter(h => h.id !== id); break;
+    default: return;
+  }
+  save(); render();
+});
+document.addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target;
+  if (f.dataset.a === 'add') { if (addTask(f.t.value, ui.addGoal, ui.addPrio)) { save(); render(); toast(ui.addPrio === 1 ? 'Wichtige Aufgabe angelegt' : 'Aufgabe angelegt'); document.querySelector('.add input').focus(); } }
+  if (f.dataset.a === 'gadd') { const n = f.n.value.trim(); if (!n) return f.n.focus();
+    S.goals.push({ id: uid(), name: n, color: ui.newColor, hours: parseFloat(f.h.value) || 0 }); ui.newColor = null; if (S.goals.length === 1) ui.addGoal = S.goals[0].id; save(); render(); }
+  if (f.dataset.a === 'hadd') { const n = f.n.value.trim(), t = parseInt(f.t.value); if (!n || !t) return (n ? f.t : f.n).focus();
+    S.habits.push({ id: uid(), name: n, icon: '', type: f.ty.value, target: t }); save(); render(); }
+});
+document.addEventListener('change', e => {
+  const el = e.target, a = el.dataset.a, id = el.dataset.id, v = el.value.trim();
+  if (a === 'rename' && v) S.tasks.find(t => t.id === id).title = v;
+  else if (a === 'gname' && v) goal(id).name = v;
+  else if (a === 'ghours') goal(id).hours = parseFloat(v) || 0;
+  else if (a === 'hname' && v) habit(id).name = v;
+  else if (a === 'htarget' && parseInt(v) > 0) habit(id).target = parseInt(v);
+  else return;
+  save(); render();
+});
+document.addEventListener('input', e => { const k = e.target.dataset.rv; if (!k) return; const wk = dkey(new Date(weekRange(ui.week)[0])); (S.reviews[wk] ||= {})[k] = e.target.value; save(); });
+document.addEventListener('toggle', e => { const f = e.target.dataset && e.target.dataset.fold; if (f === 'more') ui.moreOpen = e.target.open; if (f === 'done') ui.doneOpen = e.target.open; }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.sheet) { ui.sheet = null; render(); } });
+
+// Ziehen zum Sortieren innerhalb einer Prioritätsgruppe
+document.addEventListener('pointerdown', e => {
+  const hd = e.target.closest('.handle'); if (!hd) return;
+  e.preventDefault();
+  const item = hd.closest('.item'), list = item.parentElement, items = [...list.querySelectorAll(':scope > .item')];
+  const from = items.indexOf(item), rects = items.map(i => i.getBoundingClientRect()), hgt = rects[from].height + 6, y0 = e.clientY;
+  let to = from;
+  item.classList.add('dragging'); items.forEach(i => i !== item && i.classList.add('shift'));
+  hd.setPointerCapture(e.pointerId);
+  const move = ev => {
+    const dy = ev.clientY - y0; item.style.transform = `translateY(${dy}px)`;
+    const mid = rects[from].top + rects[from].height / 2 + dy;
+    to = from; rects.forEach((r, i) => { if (i < from && mid < r.top + r.height / 2) to = Math.min(to, i); if (i > from && mid > r.top + r.height / 2) to = Math.max(to, i); });
+    items.forEach((it, i) => { if (it === item) return; it.style.transform = (i >= to && i < from) ? `translateY(${hgt}px)` : (i <= to && i > from) ? `translateY(${-hgt}px)` : ''; });
+  };
+  const up = () => {
+    hd.removeEventListener('pointermove', move); hd.removeEventListener('pointerup', up); hd.removeEventListener('pointercancel', up);
+    if (to !== from) { const ids = items.map(i => i.dataset.id); ids.splice(to, 0, ids.splice(from, 1)[0]);
+      const ts = ids.map(i => S.tasks.find(t => t.id === i)), orders = ts.map(t => t.order).sort((x, y) => x - y); ts.forEach((t, i) => t.order = orders[i]); save(); }
+    render();
+  };
+  hd.addEventListener('pointermove', move); hd.addEventListener('pointerup', up); hd.addEventListener('pointercancel', up);
+});
+
+setInterval(tick, 1000);
+setInterval(() => { if (!runTask() && !ui.sheet && document.activeElement.tagName !== 'INPUT') render(); }, 5 * 60000); // Durst folgt der Uhrzeit
+window.addEventListener('hashchange', () => { importFromHash(); render(); });
+window.addEventListener('storage', () => { S = load(); render(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+importFromHash();
+render();
+</script>
+</body>
+</html>
