@@ -564,7 +564,7 @@ function viewSetup() {
   h += `<h3>Verbindungen</h3><div class="box small"><b>Kalender</b><p style="margin:6px 0 0">Unter „Woche“ → „In den Kalender übernehmen“ landen deine gearbeiteten Zeiten in deiner Kalender-App.</p></div>
   <div class="box small"><b>Aufgaben einfügen</b><p style="margin:6px 0 8px">Liste aus Erinnerungen oder Notizen kopieren und hier einfügen – eine Aufgabe pro Zeile. „Bereich: Aufgabe“ ordnet direkt zu, ein „!“ vorne macht sie wichtig.</p>
   <textarea id="paste" placeholder="Eine Aufgabe pro Zeile" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:60px;background:#fff"></textarea><button class="primary" style="margin-top:8px" data-a="paste">Aufgaben übernehmen</button></div>
-  <div class="box small"><b>Siri & Kurzbefehle</b><p style="margin:6px 0 0" class="muted">Kurzbefehle können diese Adressen öffnen:<br>Wasser buchen: <code>${esc(base)}#wasser=350</code><br>Aufgaben schicken: <code>${esc(base)}#import=…</code><br>Fertig eingerichtete Kurzbefehle folgen, sobald Tageswerk eine feste Adresse hat.</p></div>`;
+  <div class="box small"><b>Siri & Kurzbefehle</b><p style="margin:6px 0 0" class="muted">Kurzbefehle können diese Adressen öffnen:<br>Wasser buchen: <code>${esc(base)}#wasser=350</code><br>Aufgaben schicken: <code>${esc(base)}#import=…</code><br>Die Kurzbefehle „Wasser trinken“ und „Aufgaben an Tageswerk“ nutzen genau diese Adressen. Sie öffnen Tageswerk in Safari – Einträge landen also in der Safari-Version, nicht in der App auf dem Home-Bildschirm.</p></div>`;
   return h;
 }
 
