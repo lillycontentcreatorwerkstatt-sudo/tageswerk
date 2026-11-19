@@ -39,7 +39,9 @@
   .head { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 14px; gap: 10px; }
   .head .date { color: var(--muted); font-size: 13px; }
   .head h1 { font-family: var(--serif); font-weight: 400; font-size: 38px; letter-spacing: -.02em; line-height: 1; margin: 6px 0 0; }
-  .daymark { white-space: nowrap; margin-left: 4px; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); color: var(--muted); letter-spacing: 0; }
+  .head > div:first-child { min-width: 0; }
+  .dayline { margin: -4px 0 12px; }
+  .daymark { display: inline-block; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); color: var(--muted); letter-spacing: 0; }
   .daymark.ok { background: var(--ink); color: var(--bg); }
   .pillbtn { background: var(--card); box-shadow: var(--shadow); border-radius: 999px; padding: 7px 13px; font-size: 13px; font-weight: 500; }
   .pillbtn + .pillbtn { margin-left: 6px; }
@@ -110,8 +112,15 @@
   .irow { cursor: pointer; }
   .irow .ind { font-size: 12px; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
   .ttl.tap { cursor: pointer; }
-  .ttl.tap::after { content: "›"; color: #C9C0B0; font-family: var(--sans); font-weight: 400; margin-left: 6px; }
-  .nsteps { margin: -6px 0 14px; }
+  .ttl { margin-bottom: 10px; }
+  .tacts { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+  .tacts button { font-size: 12px; font-weight: 500; padding: 6px 11px; border-radius: 999px; background: var(--bg); color: var(--ink); display: inline-flex; align-items: center; gap: 5px; transition: transform .2s var(--spring); }
+  .tacts button:active { transform: scale(.94); }
+  .tacts svg { opacity: .55; }
+  .hint { font-size: 12px; color: var(--muted); margin: -2px 6px 8px; }
+  .status.link, .next.link { color: var(--ink); cursor: pointer; text-decoration: underline; text-decoration-color: #C9C0B0; text-underline-offset: 3px; }
+  .sheet h3 { scroll-margin-top: 70px; }
+  .nsteps { margin: -4px 0 14px; }
   .plan { background: var(--card); border-radius: 14px; padding: 4px 14px; }
   .plan .day { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 10px 0 2px; }
   .plan .drow .t { text-decoration: none; color: var(--ink); }
@@ -480,6 +489,7 @@ const checkIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" s
 const ckIco = s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 const upIco = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>`;
 const backIco = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a5 5 0 0 1 0 10H9"/><path d="M8 5L4 9l4 4"/></svg>`;
+const calIco = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>`;
 const noteIco = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg>`;
 const stepsDone = k => (k.steps || []).filter(x => x.done).length;
 function stepRow(k, st, now) {
@@ -496,16 +506,23 @@ const weekChip = g => `${fmtMin(weekTime(g.id))}${g.hours ? ` / ${g.hours} h` : 
 function statusOf(f) {
   const th = thirst();
   if (f.n >= f.F.p.length) return [`${f.F.name} vollendet${f.k ? ` · ${f.k + 1}. Figur heute` : ''}`, 'good'];
+  if (!S.goals.length) return ['Leg einen Bereich an – dann wächst hier dein Bild', 'link'];
   if (th.health < .6) return ['Die Farben verblassen – ein Glas Wasser?', 'alert'];
-  if (!S.goals.length) return ['Leg Bereiche an – dann wächst hier deine Figur', ''];
-  if (!f.total) return [`Heute entsteht: ${f.F.name} · alle ${BLOCK} min ein Stück`, ''];
+  if (!f.total) return [`Heute entsteht: ${f.F.name}`, ''];
   if (th.level >= 1) return ['Wasser voll · alles leuchtet', 'good'];
   return [`Heute entsteht: ${f.F.name}${f.k ? ` (${f.k + 1}. Figur)` : ''}`, ''];
 }
+function dayMarkText() {
+  const w = waterHabit(), f = figOf(today()), miss = [];
+  if (f.total < BLOCK) miss.push(`${Math.max(1, Math.ceil(BLOCK - f.total - 1e-9))} min Arbeit`);
+  if (w && habitDay(w.id) < w.target / 2) miss.push(`${fmtAmt(w, w.target / 2 - habitDay(w.id))} Wasser`);
+  return miss.length ? `Bis der Tag zählt: ${miss.join(' · ')}` : 'Tag zählt ✓';
+}
+const piecesText = f => !f.n && !f.k ? `Alle ${BLOCK} min Arbeit ein Teil` : `${f.n} von ${f.F.p.length} Teilen`;
 function dayOk() { const w = waterHabit(); return figOf(today()).total >= BLOCK && (!w || habitDay(w.id) >= w.target / 2); }
 function nextText(k) {
   const g = goal(k.goal), r = runTask();
-  if (!g) return 'Ohne Bereich – zählt nicht ins Bild';
+  if (!g) return S.goals.length ? 'Ohne Bereich – Bereich wählen, dann zählt sie ins Bild' : 'Ohne Bereich – leg einen an, dann zählt sie ins Bild';
   if (r && r.id === k.id) { const f = figOf(today()); return `Nächstes Stück in ${Math.max(1, Math.ceil(BLOCK - (f.total % BLOCK) - 1e-9))} min`; }
   return 'Diese Woche: ' + weekChip(g);
 }
@@ -521,10 +538,10 @@ function viewMain(f) {
   const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
   const ok = dayOk();
 
-  let h = `<div class="collapse"><div><div class="head"><div><div class="date">${date} <span class="daymark${ok ? ' ok' : ''}">${ok ? 'Tag zählt ✓' : 'Tag zählt noch nicht'}</span></div><h1>Heute</h1></div><div style="white-space:nowrap"><button class="pillbtn" data-a="sheet" data-s="woche">Woche</button><button class="pillbtn" data-a="sheet" data-s="setup">Einrichten</button></div></div></div></div>`;
+  let h = `<div class="collapse"><div><div class="head"><div><div class="date">${date}</div><h1>Heute</h1></div><div style="white-space:nowrap"><button class="pillbtn" data-a="sheet" data-s="woche">Woche</button><button class="pillbtn" data-a="sheet" data-s="setup">Einrichten</button></div></div><div class="dayline"><span class="daymark${ok ? ' ok' : ''}">${dayMarkText()}</span></div></div></div>`;
   const [stx, stc] = statusOf(f);
   h += `<section class="stagecard"><div class="stage" id="stage">${stageHTML(f)}</div>
-    <div class="sfoot"><span class="status ${stc}" id="status">${stx}</span><span class="tnum muted" id="pieces" style="white-space:nowrap">${f.n} von ${f.F.p.length} Teilen</span></div>
+    <div class="sfoot"><span class="status ${stc}" id="status"${stc === 'link' ? ' data-a="sheet" data-s="setup"' : ''}>${stx}</span><span class="tnum muted" id="pieces" style="white-space:nowrap">${piecesText(f)}</span></div>
     ${S.goals.length ? `<div class="collapse"><div><div class="areas">${S.goals.map(g => `<span class="area"><span class="dot" style="background:${g.color}"></span>${esc(g.name)} <span class="tnum muted" id="wk-${g.id}">${weekChip(g)}</span></span>`).join('')}</div></div></div>` : ''}</section>`;
 
   // Jetzt dran
@@ -532,8 +549,9 @@ function viewMain(f) {
     const g = goal(cur.goal), running = !!r;
     h += `<section class="now"><div id="nowin"><div class="lab"><span class="dot" style="background:${colorOf(cur.goal)}"></span>Jetzt dran · ${g ? esc(g.name) : 'ohne Bereich'} ${prioTag(cur.prio)}</div>
       <div class="ttl tap" data-a="open" data-id="${cur.id}">${esc(cur.title)}</div>
+      <div class="tacts">${[['wann', 'Verschieben', calIco], ['steps', 'Teilschritte', ckIco(12)], ['note', 'Notiz', noteIco]].map(([sec, l, ic]) => `<button data-a="open" data-id="${cur.id}" data-sec="${sec}">${ic}${l}</button>`).join('')}</div>
       ${(cur.steps || []).length ? `<div class="nsteps">${cur.steps.map(st => stepRow(cur, st, true)).join('')}</div>` : ''}
-      <div class="row"><div><div class="clock tnum" id="clock">${fmtClock(taskTime(cur.id))}</div><div class="next tnum" id="next">${nextText(cur)}</div></div>
+      <div class="row"><div><div class="clock tnum" id="clock">${fmtClock(taskTime(cur.id))}</div><div class="next tnum${g ? '' : ' link'}" id="next"${g ? '' : S.goals.length ? ` data-a="open" data-id="${cur.id}" data-sec="bereich"` : ' data-a="sheet" data-s="setup"'}>${nextText(cur)}</div></div>
       <div class="btns"><button class="play" data-a="${running ? 'pause' : 'start'}" data-id="${cur.id}" aria-label="${running ? 'Pause' : 'Start'}">${running ? pauseIcon : playIcon(22)}</button>
       <button class="done${(cur.steps || []).length && stepsDone(cur) === cur.steps.length ? ' ready' : ''}" data-a="finish" data-id="${cur.id}" aria-label="Fertig">${checkIcon}</button></div></div></div></section>`;
   } else {
@@ -542,7 +560,7 @@ function viewMain(f) {
 
   h += `<div class="collapse"><div>`;
   if (rest.length) {
-    h += `<details class="fold" data-fold="more" ${ui.moreOpen ? 'open' : ''}><summary><span>Weitere Aufgaben · ${rest.length}</span><span class="arr">▾</span></summary>`;
+    h += `<details class="fold" data-fold="more" ${ui.moreOpen ? 'open' : ''}><summary><span>Weitere Aufgaben · ${rest.length}</span><span class="arr">▾</span></summary><div class="hint">Antippen zum Verschieben, Aufteilen, Notieren</div>`;
     [1, 2, 3].forEach(p => { const l = rest.filter(k => k.prio === p); if (l.length) h += `<div class="grp">${PRIO[p]}</div><div class="list" data-prio="${p}">${l.map(itemRow).join('')}</div>`; });
     h += `</details>`;
   }
@@ -551,7 +569,7 @@ function viewMain(f) {
     let last = '', rows = '';
     plan.forEach(k => { if (k.date !== last) { last = k.date; rows += `<div class="day">${dayLabel(k.date)}</div>`; }
       rows += `<div class="drow" data-a="open" data-id="${k.id}"><span class="dot" style="background:${colorOf(k.goal)}"></span><span class="t">${esc(k.title)}</span>${k.prio === 1 ? prioTag(1) : ''}</div>`; });
-    h += `<details class="fold" data-fold="plan" ${ui.planOpen ? 'open' : ''}><summary><span>Geplant · ${plan.length}</span><span class="arr">▾</span></summary><div class="plan">${rows}</div></details>`;
+    h += `<details class="fold" data-fold="plan" ${ui.planOpen ? 'open' : ''}><summary><span>Geplant · ${plan.length}</span><span class="arr">▾</span></summary><div class="hint">Antippen zum Verschieben, Aufteilen, Notieren</div><div class="plan">${rows}</div></details>`;
   }
   h += `<div class="add"><form data-a="add"><input name="t" placeholder="Neue Aufgabe …" autocomplete="off" enterkeyhint="done"><button class="plus" aria-label="Hinzufügen">+</button></form>
     <div class="opts">${prioSeg(ui.addPrio, 'addprio')}${S.goals.length ? goalChips(ui.addGoal, 'addgoal') : ''}</div></div>`;
@@ -592,12 +610,12 @@ function viewTask(k) {
   if (!k.done) {
     const quick = [['Heute', t], ['Morgen', addDays(t, 1)], ['Nächste Woche', nextMonday()]];
     const custom = !quick.some(q => q[1] === k.date);
-    h += `<h3>Wann</h3><div class="box"><div class="chips">${quick.map(([l, d]) => `<button class="${k.date === d ? 'sel' : ''}" data-a="setdate" data-id="${k.id}" data-d="${d}">${l}</button>`).join('')}<input type="date" class="datein${custom ? ' sel' : ''}" data-a="date" data-id="${k.id}" value="${k.date}" min="${t}" aria-label="Datum wählen"></div></div>`;
+    h += `<h3 id="sec-wann">Wann</h3><div class="box"><div class="chips">${quick.map(([l, d]) => `<button class="${k.date === d ? 'sel' : ''}" data-a="setdate" data-id="${k.id}" data-d="${d}">${l}</button>`).join('')}<input type="date" class="datein${custom ? ' sel' : ''}" data-a="date" data-id="${k.id}" value="${k.date}" min="${t}" aria-label="Datum wählen"></div></div>`;
   }
-  h += `<h3>Teilschritte${steps.length ? ` · ${nd} von ${steps.length}` : ''}</h3><div class="box list2">${steps.map(st => stepRow(k, st, false)).join('')}
+  h += `<h3 id="sec-steps">Teilschritte${steps.length ? ` · ${nd} von ${steps.length}` : ''}</h3><div class="box list2">${steps.map(st => stepRow(k, st, false)).join('')}
     <form class="stadd" data-a="addstep" data-id="${k.id}"><span class="ck">+</span><input id="stepin" name="t" placeholder="${steps.length ? 'Nächster Schritt …' : 'In Schritte aufteilen …'}" autocomplete="off" enterkeyhint="done"></form></div>`;
-  h += `<h3>Notiz</h3><div class="box"><textarea class="note" data-note="${k.id}" placeholder="Gedanken, Links, Details …">${esc(k.notes || '')}</textarea></div>`;
-  h += `<h3>Einstufung & Bereich</h3><div class="box">${prioSeg(k.prio, 'setprio', k.id)}${S.goals.length ? `<div style="height:12px"></div>${goalChips(k.goal, 'setgoal', k.id)}` : ''}${spent && S.goals.length ? '<div class="muted small" style="margin-top:8px">Die gearbeitete Zeit wandert mit – samt Farbe im Bild.</div>' : ''}</div>`;
+  h += `<h3 id="sec-note">Notiz</h3><div class="box"><textarea class="note" data-note="${k.id}" placeholder="Gedanken, Links, Details …">${esc(k.notes || '')}</textarea></div>`;
+  h += `<h3 id="sec-bereich">Einstufung & Bereich</h3><div class="box">${prioSeg(k.prio, 'setprio', k.id)}${S.goals.length ? `<div style="height:12px"></div>${goalChips(k.goal, 'setgoal', k.id)}` : ''}${spent && S.goals.length ? '<div class="muted small" style="margin-top:8px">Die gearbeitete Zeit wandert mit – samt Farbe im Bild.</div>' : ''}</div>`;
   h += `<button class="delbtn" data-a="del" data-id="${k.id}">Aufgabe löschen</button>`;
   return h;
 }
@@ -698,6 +716,12 @@ function render() {
     sh.querySelectorAll('.tt, .note').forEach(grow);
     if (!fresh) { const s = sh.querySelector('.sheet'); s.style.animation = 'none'; sh.querySelector('.sheet-bg').style.animation = 'none'; s.scrollTop = scroll; }
     if (ui.focusStep) { ui.focusStep = false; const i = $('stepin'); if (i) i.focus(); }
+    if (ui.sec) {
+      const sec = ui.sec, hd = $('sec-' + sec); ui.sec = null;
+      if (hd && fresh) sh.querySelector('.sheet').scrollTop = Math.max(0, hd.offsetTop - 70);
+      const fi = sec === 'steps' ? $('stepin') : sec === 'note' ? sh.querySelector('.note') : null;
+      if (fi) { fi.focus({ preventScroll: true }); if (fi.setSelectionRange) fi.setSelectionRange(fi.value.length, fi.value.length); }
+    }
   } else sh.innerHTML = '';
   tick();
 }
@@ -716,15 +740,15 @@ function tick() {
       $('pcs').insertAdjacentHTML('beforeend', pieceSVG(f, f.n - 1)); drawCur(f); snapPiece(f, f.n - 1); chord(f.n + 2);
       const cp = centroid(f.F.pts[f.n - 1]); floatText(`+${BLOCK} min`, host, cp[0] / 4, cp[1] / 3 - 6, 'gold');
       const s = $('status'); s.textContent = f.n < f.F.p.length ? `Teil ${f.n} von ${f.F.p.length} sitzt` : `${f.F.name} vollendet`; s.className = 'status good';
-      $('pieces').textContent = `${f.n} von ${f.F.p.length} Teilen`;
+      $('pieces').textContent = piecesText(f);
       if (f.n === f.F.p.length) setTimeout(() => complete(f), 900);
     } else {
       pulseCur(); tone(note(f.n + 1), .05);
       const cp = centroid(f.F.pts[f.n]); floatText(`+${BLOCK} min`, host, cp[0] / 4, cp[1] / 3 - 6, 'gold');
     }
     const wk = $('wk-' + g.id); if (wk) wk.textContent = weekChip(g);
-    const dm = document.querySelector('.daymark'); if (dm && dayOk() && !dm.classList.contains('ok')) { dm.classList.add('ok'); dm.textContent = 'Tag zählt ✓'; }
   }
+  const dm = document.querySelector('.daymark'); if (dm) { dm.textContent = dayMarkText(); dm.classList.toggle('ok', dayOk()); }
   ui.blk = blk; ui.pcs = f.n; ui.figK = f.k;
   updateCur(f);
 }
@@ -735,7 +759,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b || ['INPUT', 'FORM', 'TEXTAREA', 'SELECT'].includes(b.tagName)) return;
   const a = b.dataset.a, id = b.dataset.id, task = () => S.tasks.find(t => t.id === id);
   switch (a) {
-    case 'open': ui.sheet = 'task'; ui.taskId = id; render(); return;
+    case 'open': ui.sheet = 'task'; ui.taskId = id; ui.sec = b.dataset.sec || null; render(); return;
     case 'start': task().date = today(); start(id); tone(0, .03); if (ui.sheet === 'task') ui.sheet = null; break;
     case 'pause': stopRunning(); break;
     case 'finish': {
